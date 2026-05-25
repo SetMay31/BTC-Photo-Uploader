@@ -487,6 +487,10 @@ button.danger {
   align-items: center;
   gap: 8px;
 }
+.range-row > input {
+  width: 100%;
+  min-width: 0;
+}
 .range-sep {
   font-size: 0.9rem;
   color: var(--ink-muted);
