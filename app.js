@@ -637,48 +637,112 @@
   }
 
   // ---------- Master sheet (Citizen Science) ----------
-  async function findOrCreateMasterSheet(survey) {
-    const ms = survey.masterSheet;
-    const cachedId = localStorage.getItem(ms.storageKey);
-    if (cachedId) {
-      // Verify it still exists; if not, fall through to create.
-      const check = await gapi(`/drive/v3/files/${cachedId}?fields=id&supportsAllDrives=true`);
-      if (check.ok) return cachedId;
+  // Ensures the sheet's first row contains the expected headers (inserting a
+  // row above existing data if needed), and applies bold + freeze formatting.
+  // Self-healing: safe to call before every append.
+  async function ensureMasterSheetHeaders(sheetId, headers) {
+    const checkResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1`);
+    if (!checkResp.ok) {
+      const errText = await checkResp.text().catch(() => "");
+      throw new Error(`Header check failed (${checkResp.status}): ${errText.slice(0, 200)}`);
     }
-    // Look in the parent folder for a sheet with the configured title.
-    const q = encodeURIComponent(`mimeType='application/vnd.google-apps.spreadsheet' and trashed=false and name='${ms.title.replace(/'/g, "\\'")}' and '${ms.parentFolderId}' in parents`);
-    const search = await gapi(`/drive/v3/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-    if (search.ok) {
-      const data = await search.json();
-      if (data.files && data.files[0]) {
-        localStorage.setItem(ms.storageKey, data.files[0].id);
-        return data.files[0].id;
-      }
+    const data = await checkResp.json();
+    const a1Value = (data.values && data.values[0] && data.values[0][0]) || null;
+    if (a1Value === headers[0]) return; // already has headers
+
+    // Need the sheet's grid sheetId for structural batchUpdate requests.
+    const metaResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets(properties(sheetId))`);
+    if (!metaResp.ok) {
+      const errText = await metaResp.text().catch(() => "");
+      throw new Error(`Sheet metadata failed (${metaResp.status}): ${errText.slice(0, 200)}`);
     }
-    // Create a fresh sheet in the parent folder.
-    const createResp = await gapi("/drive/v3/files?supportsAllDrives=true", {
+    const meta = await metaResp.json();
+    const gridSheetId = meta.sheets[0].properties.sheetId;
+
+    const requests = [];
+    // If there's existing data in A1, push it down by inserting an empty row.
+    if (a1Value !== null) {
+      requests.push({
+        insertDimension: {
+          range: { sheetId: gridSheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
+          inheritFromBefore: false,
+        },
+      });
+    }
+    // Bold + freeze the header row for usability.
+    requests.push({
+      updateSheetProperties: {
+        properties: { sheetId: gridSheetId, gridProperties: { frozenRowCount: 1 } },
+        fields: "gridProperties.frozenRowCount",
+      },
+    });
+    requests.push({
+      repeatCell: {
+        range: { sheetId: gridSheetId, startRowIndex: 0, endRowIndex: 1 },
+        cell: { userEnteredFormat: { textFormat: { bold: true } } },
+        fields: "userEnteredFormat.textFormat.bold",
+      },
+    });
+    const batchResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: ms.title,
-        mimeType: "application/vnd.google-apps.spreadsheet",
-        parents: [ms.parentFolderId],
-      }),
+      body: JSON.stringify({ requests }),
     });
-    if (!createResp.ok) throw new Error("Failed to create master sheet: " + createResp.status);
-    const file = await createResp.json();
-    // Write headers to first row. Sheets API uses its own subdomain.
-    const headerResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/A1?valueInputOption=RAW`, {
+    if (!batchResp.ok) {
+      const errText = await batchResp.text().catch(() => "");
+      throw new Error(`Header insert failed (${batchResp.status}): ${errText.slice(0, 200)}`);
+    }
+    // Write the header values into the now-empty row 1.
+    const writeResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1?valueInputOption=RAW`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ values: [ms.headers] }),
+      body: JSON.stringify({ values: [headers] }),
     });
-    if (!headerResp.ok) {
-      const errText = await headerResp.text().catch(() => "");
-      throw new Error(`Failed to write headers (${headerResp.status}): ${errText.slice(0, 200)}`);
+    if (!writeResp.ok) {
+      const errText = await writeResp.text().catch(() => "");
+      throw new Error(`Header write failed (${writeResp.status}): ${errText.slice(0, 200)}`);
     }
-    localStorage.setItem(ms.storageKey, file.id);
-    return file.id;
+  }
+
+  async function findOrCreateMasterSheet(survey) {
+    const ms = survey.masterSheet;
+    let sheetId = null;
+    const cachedId = localStorage.getItem(ms.storageKey);
+    if (cachedId) {
+      const check = await gapi(`/drive/v3/files/${cachedId}?fields=id&supportsAllDrives=true`);
+      if (check.ok) sheetId = cachedId;
+    }
+    if (!sheetId) {
+      // Look in the parent folder for a sheet with the configured title.
+      const q = encodeURIComponent(`mimeType='application/vnd.google-apps.spreadsheet' and trashed=false and name='${ms.title.replace(/'/g, "\\'")}' and '${ms.parentFolderId}' in parents`);
+      const search = await gapi(`/drive/v3/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+      if (search.ok) {
+        const searchData = await search.json();
+        if (searchData.files && searchData.files[0]) {
+          sheetId = searchData.files[0].id;
+          localStorage.setItem(ms.storageKey, sheetId);
+        }
+      }
+    }
+    if (!sheetId) {
+      const createResp = await gapi("/drive/v3/files?supportsAllDrives=true", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: ms.title,
+          mimeType: "application/vnd.google-apps.spreadsheet",
+          parents: [ms.parentFolderId],
+        }),
+      });
+      if (!createResp.ok) throw new Error("Failed to create master sheet: " + createResp.status);
+      const file = await createResp.json();
+      sheetId = file.id;
+      localStorage.setItem(ms.storageKey, sheetId);
+    }
+    // Always make sure headers are in place — handles the case where the sheet
+    // existed but headers were never successfully written (or were deleted).
+    await ensureMasterSheetHeaders(sheetId, ms.headers);
+    return sheetId;
   }
 
   async function appendMasterSheetRow(sheetId, row) {
