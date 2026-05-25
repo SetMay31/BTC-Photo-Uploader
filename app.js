@@ -223,6 +223,20 @@
       });
       labelEl.appendChild(selectEl);
       labelEl.appendChild(otherInput);
+    } else if (field.type === "count-breakdown") {
+      // Row of small numeric inputs, each labelled (e.g. NN / JV / A).
+      const row = el("div", { class: "breakdown-row" });
+      field.parts.forEach((part) => {
+        const cell = el("div", { class: "breakdown-cell" });
+        const cellLabel = el("span", { class: "breakdown-label", title: part.title || "" }, part.label);
+        const input = el("input", { type: "number", min: 0, step: 1, inputmode: "numeric", name: part.name });
+        if (values[part.name] != null) input.value = values[part.name];
+        input.addEventListener("input", () => { values[part.name] = input.value; onChange(); });
+        cell.appendChild(cellLabel);
+        cell.appendChild(input);
+        row.appendChild(cell);
+      });
+      labelEl.appendChild(row);
     } else if (field.type === "range") {
       // Two text inputs side by side (e.g. min / max size).
       const row = el("div", { class: "range-row" });
@@ -872,6 +886,9 @@
             mv.sizeMin || "",
             mv.sizeMax || "",
             mv.sharksSeenTotal || "",
+            mv.neonateCount || "",
+            mv.juvenileCount || "",
+            mv.adultCount || "",
             successCount,
             mv.submissionNote || "",
             folderUrl,
