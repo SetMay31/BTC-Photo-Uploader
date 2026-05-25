@@ -123,9 +123,6 @@ body {
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: thin;
-  position: sticky;
-  top: 92px;
-  z-index: 9;
 }
 .survey-toggle::-webkit-scrollbar { height: 4px; }
 .survey-pill {
