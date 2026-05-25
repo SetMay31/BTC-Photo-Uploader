@@ -944,12 +944,8 @@
   function bindUploadButtons() {
     $("#upload-btn").addEventListener("click", startUpload);
     $("#clear-btn").addEventListener("click", () => {
-      state.photos.forEach((p) => URL.revokeObjectURL(p.thumbUrl));
-      state.photos = [];
-      renderPhotoList();
-      updateUploadButton();
-      $("#upload-result").className = "submit-result";
-      $("#upload-result").textContent = "";
+      // Full reset of the current survey: photos, folder fields, master sheet fields.
+      if (state.currentSurvey) selectSurvey(state.currentSurvey.key);
     });
   }
 
