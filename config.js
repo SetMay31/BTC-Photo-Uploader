@@ -25,12 +25,6 @@ const FIELD_UPLOADED_BY = {
   type: "team-or-other",
   required: true,
 };
-const FIELD_SUBMITTED_BY = {
-  name: "submittedBy",
-  label: "Submitted By",
-  type: "team-or-other",
-  required: true,
-};
 
 // Side options for Sea Turtle.
 const TURTLE_SIDE_OPTIONS = ["Right", "Left", "Above"];
@@ -151,7 +145,7 @@ const SURVEYS = [
       sequence: { field: "number", continueFromFolder: true },
       fields: [
         { name: "note", label: "Note", type: "text", placeholder: "e.g. scarring, propellor damage, behaviour" },
-        FIELD_SUBMITTED_BY,
+        { name: "submittedBy", label: "Submitted By", type: "text", required: true, placeholder: "Name of person who reported the sighting" },
       ],
       template: "{number}[-{note}]-{submittedBy}",
     },
