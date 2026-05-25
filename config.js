@@ -176,7 +176,7 @@ const SURVEYS = [
       fields: [
         { name: "depth", label: "Depth (M)", type: "text", placeholder: "e.g. 12" },
         { name: "time", label: "Time", type: "time" },
-        { nameMin: "sizeMin", nameMax: "sizeMax", label: "Size (M)", type: "range", placeholder: "e.g. 0.4" },
+        { nameMin: "sizeMin", nameMax: "sizeMax", label: "Size (M)", type: "range", placeholderMin: "e.g. 0.4", placeholderMax: "e.g. 1.2" },
         { name: "sharksSeenTotal", label: "Number of Sharks Seen Total", type: "number", min: 0 },
         {
           label: "Of which (optional)",

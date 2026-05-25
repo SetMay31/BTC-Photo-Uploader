@@ -240,8 +240,8 @@
     } else if (field.type === "range") {
       // Two text inputs side by side (e.g. min / max size).
       const row = el("div", { class: "range-row" });
-      const minInput = el("input", { type: "text", name: field.nameMin, placeholder: field.placeholder || "Min", inputmode: "decimal" });
-      const maxInput = el("input", { type: "text", name: field.nameMax, placeholder: field.placeholder || "Max", inputmode: "decimal" });
+      const minInput = el("input", { type: "text", name: field.nameMin, placeholder: field.placeholderMin || field.placeholder || "Min", inputmode: "decimal" });
+      const maxInput = el("input", { type: "text", name: field.nameMax, placeholder: field.placeholderMax || field.placeholder || "Max", inputmode: "decimal" });
       if (values[field.nameMin] != null) minInput.value = values[field.nameMin];
       if (values[field.nameMax] != null) maxInput.value = values[field.nameMax];
       minInput.addEventListener("input", () => { values[field.nameMin] = minInput.value; onChange(); });
