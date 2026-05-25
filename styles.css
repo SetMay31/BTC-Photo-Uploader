@@ -481,6 +481,18 @@ button.danger {
   font-size: 0.9rem;
 }
 
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.range-sep {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
 /* --- Per-photo progress bar (light overlay during upload) --- */
 .photo-row .progress-track {
   height: 4px;

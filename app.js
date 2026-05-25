@@ -223,6 +223,20 @@
       });
       labelEl.appendChild(selectEl);
       labelEl.appendChild(otherInput);
+    } else if (field.type === "range") {
+      // Two text inputs side by side (e.g. min / max size).
+      const row = el("div", { class: "range-row" });
+      const minInput = el("input", { type: "text", name: field.nameMin, placeholder: field.placeholder || "Min", inputmode: "decimal" });
+      const maxInput = el("input", { type: "text", name: field.nameMax, placeholder: field.placeholder || "Max", inputmode: "decimal" });
+      if (values[field.nameMin] != null) minInput.value = values[field.nameMin];
+      if (values[field.nameMax] != null) maxInput.value = values[field.nameMax];
+      minInput.addEventListener("input", () => { values[field.nameMin] = minInput.value; onChange(); });
+      maxInput.addEventListener("input", () => { values[field.nameMax] = maxInput.value; onChange(); });
+      const sep = el("span", { class: "range-sep" }, "to");
+      row.appendChild(minInput);
+      row.appendChild(sep);
+      row.appendChild(maxInput);
+      labelEl.appendChild(row);
     } else {
       // Default: text (incl. auto-increment-text which behaves identically — autofill is handled by caller).
       const input = el("input", { type: "text", name: field.name, placeholder: field.placeholder || "" });
@@ -855,7 +869,8 @@
             (state.photos.find((p) => p.values.submittedBy) || { values: {} }).values.submittedBy || "",
             mv.depth || "",
             mv.time || "",
-            mv.approximateSize || "",
+            mv.sizeMin || "",
+            mv.sizeMax || "",
             mv.sharksSeenTotal || "",
             successCount,
             mv.submissionNote || "",
