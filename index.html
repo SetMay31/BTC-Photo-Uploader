@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2d7a72" />
+  <title>BTC Photo Uploader</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="app-icon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="app-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <img class="brand-mark" src="logo.png" alt="Black Turtle Conservation"
+           onerror="if(!this.dataset.t){this.dataset.t='1';this.src='icon.svg'}else{this.onerror=null}" />
+      <div class="brand-text">
+        <span class="brand-line-1">Black Turtle Conservation</span>
+        <span class="brand-line-2">Photo Uploader</span>
+      </div>
+      <div class="topbar-status">
+        <span id="net-status" class="net-dot" title="Online status"></span>
+        <button id="auth-btn" class="auth-btn" type="button">Sign in</button>
+      </div>
+    </div>
+  </header>
+
+  <nav id="survey-toggle" class="survey-toggle" aria-label="Survey selector"></nav>
+
+  <main id="app">
+    <section class="screen" id="auth-prompt">
+      <h2>Sign in with Google</h2>
+      <p class="muted">To upload photos to the shared BTC Drive folders, sign in with your Google account. You only need to do this once per device.</p>
+      <button id="auth-btn-large" class="primary">Sign in with Google</button>
+      <p class="muted small auth-error" id="auth-error"></p>
+      <p class="muted small" style="margin-top: 24px;">
+        <button id="preview-btn" class="ghost" type="button">Preview UI without signing in</button>
+        <br><span class="small">Lets you explore the form/naming UI. Uploads stay disabled until sign-in.</span>
+      </p>
+    </section>
+
+    <section class="screen hidden" id="uploader">
+      <div id="preview-banner" class="preview-banner hidden">
+        Preview mode — uploads are disabled. <button id="preview-banner-signin" type="button" class="preview-banner-link">Sign in to enable uploads</button>
+      </div>
+      <div class="screen-head">
+        <h2 id="survey-heading">Survey</h2>
+        <div class="progress-pill" id="photo-count">0 photos</div>
+      </div>
+
+      <h3>Folder Details</h3>
+      <form id="folder-form" class="form-stack" autocomplete="off"></form>
+
+      <h3 id="master-sheet-heading" class="hidden">Submission Summary</h3>
+      <form id="master-sheet-form" class="form-stack hidden" autocomplete="off"></form>
+
+      <h3>Photos</h3>
+      <div id="drop-area" class="drop-area">
+        <p><strong>Drop photos here</strong> or click to select.</p>
+        <p class="muted small">JPG, PNG, HEIC — multiple selection supported. HEIC will be auto-converted to JPG on upload.</p>
+        <input type="file" id="file-input" accept="image/*,.heic,.HEIC" multiple hidden />
+      </div>
+
+      <p class="muted small folder-preview" id="folder-preview"></p>
+
+      <div id="photo-list" class="photo-list"></div>
+
+      <div class="upload-actions">
+        <button id="upload-btn" class="primary" disabled>Upload photos</button>
+        <button id="clear-btn" class="ghost">Clear all</button>
+      </div>
+
+      <div id="upload-result" class="submit-result"></div>
+    </section>
+  </main>
+
+  <!-- Per-photo row template -->
+  <template id="tpl-photo-row">
+    <div class="photo-row">
+      <div class="photo-row-head">
+        <img class="photo-thumb" />
+        <div class="photo-row-meta">
+          <span class="photo-original-name"></span>
+          <span class="photo-preview-name muted small"></span>
+        </div>
+        <button class="photo-collapse" type="button" aria-label="Collapse" aria-expanded="true">
+          <span class="chevron"></span>
+        </button>
+        <button class="photo-remove ghost" type="button" aria-label="Remove">×</button>
+      </div>
+      <div class="photo-row-fields"></div>
+      <p class="photo-error muted small"></p>
+    </div>
+  </template>
+
+  <!-- Duplicate folder modal -->
+  <template id="tpl-dup-folder">
+    <div class="modal-backdrop">
+      <div class="modal">
+        <h3>Folder already exists</h3>
+        <p>A folder named <strong id="dup-folder-name"></strong> already exists in Drive. What would you like to do?</p>
+        <p class="muted small">Existing folder contains <span id="dup-folder-count">?</span> photo(s).</p>
+        <div class="modal-actions vertical">
+          <button class="primary" data-action="add">Add to existing folder</button>
+          <button class="ghost" data-action="suffix">Create a new folder with suffix</button>
+          <button class="ghost" data-action="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- "Other (specify)" inline input template -->
+  <template id="tpl-other-input">
+    <input type="text" class="other-specify" placeholder="Please specify" />
+  </template>
+
+  <!-- Google APIs -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <!-- HEIC → JPG converter (loaded lazily when needed). -->
+  <!-- heic2any (~600 KB) is only fetched the first time a HEIC file is added. -->
+
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
