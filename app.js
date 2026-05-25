@@ -667,24 +667,31 @@
     });
     if (!createResp.ok) throw new Error("Failed to create master sheet: " + createResp.status);
     const file = await createResp.json();
-    // Write headers to first row.
-    await gapi(`/sheets/v4/spreadsheets/${file.id}/values/A1?valueInputOption=RAW`, {
+    // Write headers to first row. Sheets API uses its own subdomain.
+    const headerResp = await gapi(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/A1?valueInputOption=RAW`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ values: [ms.headers] }),
     });
+    if (!headerResp.ok) {
+      const errText = await headerResp.text().catch(() => "");
+      throw new Error(`Failed to write headers (${headerResp.status}): ${errText.slice(0, 200)}`);
+    }
     localStorage.setItem(ms.storageKey, file.id);
     return file.id;
   }
 
   async function appendMasterSheetRow(sheetId, row) {
-    const url = `/sheets/v4/spreadsheets/${sheetId}/values/A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
     const resp = await gapi(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ values: [row] }),
     });
-    if (!resp.ok) throw new Error("Failed to append master sheet row: " + resp.status);
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      throw new Error(`Append failed (${resp.status}): ${errText.slice(0, 200)}`);
+    }
   }
 
   // ---------- Upload flow ----------
