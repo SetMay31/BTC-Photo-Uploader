@@ -519,6 +519,43 @@ button.danger {
   min-width: 0;
 }
 
+.site-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dive-site-add-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dive-site-add {
+  background: transparent;
+  border: 1px dashed var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 500;
+  font-size: 0.85rem;
+  min-height: 36px;
+  width: 100%;
+}
+.dive-site-add:hover { background: var(--accent-soft); }
+.dive-site-add-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dive-site-add-form input {
+  flex: 1 1 100%;
+  min-height: 40px;
+}
+.dive-site-add-form button {
+  flex: 1 1 100px;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 0.9rem;
+}
+
 /* --- Per-photo progress bar (light overlay during upload) --- */
 .photo-row .progress-track {
   height: 4px;

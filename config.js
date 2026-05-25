@@ -32,6 +32,58 @@ const TURTLE_SIDE_OPTIONS = ["Right", "Left", "Above"];
 // Upload methods for Citizen Science.
 const CITIZEN_SCIENCE_METHODS = ["Facebook", "WhatsApp"];
 
+// Dive site lists — kept in sync with the existing BTC uploaders that share
+// this GitHub Pages origin. Custom additions are stored under the same
+// localStorage keys those apps use, so adding a site here makes it available
+// in the source uploader too and vice versa.
+const SEA_TURTLE_SITES = {
+  defaults: [
+    "Sai Nuan (Banana Rock)",
+    "Sai Thong (Leo Beach)",
+    "Sai Daeng",
+    "Aow Leuk",
+    "Hin Wong Bay",
+    "Shark Bay",
+    "Tanote Bay",
+    "June Juea",
+    "Freedom Beach",
+    "Tao Tong",
+    "Chalok Bay",
+  ],
+  customStorageKey: "sts:customDiveSites",
+};
+const SHARK_SITES = {
+  defaults: [
+    "Aow Leuk",
+    "Chalok Bay",
+    "Freedom Beach",
+    "Hin Wong Bay",
+    "June Juea",
+    "Sai Daeng",
+    "Sai Nuan (Banana Rock)",
+    "Sai Thong (Leo Beach)",
+    "Shark Bay",
+    "Tanote Bay",
+    "Tao Tong",
+  ],
+  customStorageKey: "shk:customDiveSites",
+};
+const EMP_SITES = {
+  defaults: [
+    "Twins",
+    "Mango Bay",
+    "Junkyard",
+    "Aow Leuk",
+    "Tanote Bay",
+    "BTD Reef",
+    "Tao Tong",
+    "Freedom Beach",
+    "Laem Thian",
+    "Japanese Gardens",
+  ],
+  customStorageKey: "ems:customDiveSites",
+};
+
 // --- Survey definitions ---
 // Each survey contains:
 //   key           — internal id (kebab-case)
@@ -56,7 +108,7 @@ const SURVEYS = [
     folder: {
       fields: [
         { name: "surveyDate", label: "Survey Date", type: "date", required: true },
-        { name: "surveySite", label: "Survey Site", type: "text", required: true },
+        { name: "surveySite", label: "Survey Site", type: "site-select", required: true, sites: SEA_TURTLE_SITES },
         FIELD_UPLOADED_BY,
       ],
       template: "{surveyDate}-{surveySite}-{uploadedBy}",
@@ -91,7 +143,7 @@ const SURVEYS = [
     folder: {
       fields: [
         { name: "surveyDate", label: "Survey Date", type: "date", required: true },
-        { name: "surveySite", label: "Survey Site", type: "text", required: true },
+        { name: "surveySite", label: "Survey Site", type: "site-select", required: true, sites: SHARK_SITES },
         FIELD_UPLOADED_BY,
       ],
       template: "{surveyDate}-{surveySite}-{uploadedBy}",
@@ -130,7 +182,7 @@ const SURVEYS = [
     folder: {
       fields: [
         { name: "date", label: "Date", type: "date", required: true },
-        { name: "site", label: "Site", type: "text", required: true },
+        { name: "site", label: "Site", type: "site-select", required: true, sites: SHARK_SITES },
         {
           name: "uploadMethod",
           label: "Upload Method",
@@ -205,8 +257,8 @@ const SURVEYS = [
     folder: {
       fields: [
         { name: "date", label: "Date", type: "date", required: true },
-        { name: "site1", label: "Site 1", type: "text", required: true },
-        { name: "site2", label: "Site 2", type: "text", required: false, placeholder: "Optional — leave blank if only one site" },
+        { name: "site1", label: "Site 1", type: "site-select", required: true, sites: EMP_SITES },
+        { name: "site2", label: "Site 2", type: "site-select", required: false, sites: EMP_SITES, allowEmpty: true },
       ],
       template: "{date}-{site1}[-{site2}]",
     },
@@ -234,8 +286,8 @@ const SURVEYS = [
     folder: {
       fields: [
         { name: "date", label: "Date", type: "date", required: true },
-        { name: "site1", label: "Site 1", type: "text", required: true },
-        { name: "site2", label: "Site 2", type: "text", required: false, placeholder: "Optional — leave blank if only one site" },
+        { name: "site1", label: "Site 1", type: "site-select", required: true, sites: EMP_SITES },
+        { name: "site2", label: "Site 2", type: "site-select", required: false, sites: EMP_SITES, allowEmpty: true },
         FIELD_UPLOADED_BY,
       ],
       template: "{date}-{site1}[-{site2}]-{uploadedBy}",

@@ -47,6 +47,21 @@
     return e;
   }
 
+  // ---------- Custom dive sites (localStorage, shared with sibling BTC uploaders) ----------
+  function loadCustomSites(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveCustomSites(key, list) {
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+
   // ---------- Filename safety ----------
   // Convert spaces inside a field value to underscores so dash remains the field separator.
   function safeField(s) {
@@ -223,6 +238,82 @@
       });
       labelEl.appendChild(selectEl);
       labelEl.appendChild(otherInput);
+    } else if (field.type === "site-select") {
+      // Dropdown of dive sites with an inline "Add new site" affordance.
+      // Custom additions are stored under the same localStorage key used by
+      // the matching BTC uploader (sts/shk/ems), so they sync across apps.
+      const wrap = el("div", { class: "site-select-wrap" });
+      const selectEl = el("select", { name: field.name });
+      const addRow = el("div", { class: "dive-site-add-row" });
+      const addBtn = el("button", { type: "button", class: "dive-site-add" }, "+ Add new site");
+      const addForm = el("div", { class: "dive-site-add-form hidden" });
+      const newInput = el("input", { type: "text", placeholder: "New site name" });
+      const confirmBtn = el("button", { type: "button", class: "primary" }, "Add");
+      const cancelBtn = el("button", { type: "button", class: "ghost" }, "Cancel");
+      addForm.appendChild(newInput);
+      addForm.appendChild(confirmBtn);
+      addForm.appendChild(cancelBtn);
+      addRow.appendChild(addBtn);
+      addRow.appendChild(addForm);
+
+      const populate = (selectedValue) => {
+        const customs = loadCustomSites(field.sites.customStorageKey);
+        selectEl.innerHTML = "";
+        if (field.allowEmpty) {
+          selectEl.appendChild(el("option", { value: "" }, "— None —"));
+        } else {
+          selectEl.appendChild(el("option", { value: "" }, "— Choose a site —"));
+        }
+        const all = [...field.sites.defaults];
+        for (const c of customs) if (!all.includes(c)) all.push(c);
+        for (const site of all) selectEl.appendChild(el("option", { value: site }, site));
+        if (selectedValue && all.includes(selectedValue)) {
+          selectEl.value = selectedValue;
+        } else if (selectedValue) {
+          // Persisted value isn't in known list — show it anyway so the user sees it.
+          selectEl.appendChild(el("option", { value: selectedValue }, selectedValue));
+          selectEl.value = selectedValue;
+        }
+      };
+      populate(values[field.name] || "");
+
+      selectEl.addEventListener("change", () => {
+        values[field.name] = selectEl.value;
+        onChange();
+      });
+      addBtn.addEventListener("click", () => {
+        addBtn.classList.add("hidden");
+        addForm.classList.remove("hidden");
+        newInput.focus();
+      });
+      const closeAddForm = () => {
+        addBtn.classList.remove("hidden");
+        addForm.classList.add("hidden");
+        newInput.value = "";
+      };
+      cancelBtn.addEventListener("click", closeAddForm);
+      const submitNewSite = () => {
+        const name = newInput.value.trim();
+        if (!name) return;
+        const customs = loadCustomSites(field.sites.customStorageKey);
+        if (!field.sites.defaults.includes(name) && !customs.includes(name)) {
+          customs.push(name);
+          saveCustomSites(field.sites.customStorageKey, customs);
+        }
+        values[field.name] = name;
+        populate(name);
+        closeAddForm();
+        onChange();
+      };
+      confirmBtn.addEventListener("click", submitNewSite);
+      newInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); submitNewSite(); }
+        if (e.key === "Escape") closeAddForm();
+      });
+
+      wrap.appendChild(selectEl);
+      wrap.appendChild(addRow);
+      labelEl.appendChild(wrap);
     } else if (field.type === "count-breakdown") {
       // Row of small numeric inputs, each labelled (e.g. NN / JV / A).
       const row = el("div", { class: "breakdown-row" });
