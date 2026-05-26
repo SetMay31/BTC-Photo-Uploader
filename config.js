@@ -14,7 +14,7 @@ const OAUTH_CLIENT_ID = "547270539651-9ockq941ks3kpd2gbiu3gj7vt8871dh5.apps.goog
 // https://console.cloud.google.com/apis/credentials → "Create credentials → API key"
 // in the same Cloud project as the OAuth client. Restrict it by HTTP referrer
 // to https://setmay31.github.io/* and http://localhost:8087/*. Paste below.
-const PICKER_API_KEY = "REPLACE_WITH_YOUR_PICKER_API_KEY";
+const PICKER_API_KEY = "AIzaSyBlOFgmIhCPOjj358ZH1VTzrMczL6Wu_Wo";
 
 const TEAM_MEMBERS = [
   "Cass Chaytor",
