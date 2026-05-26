@@ -2,7 +2,7 @@
 // Caches the app shell so the UI works offline. Uploads themselves require
 // network connectivity (Google Drive/Sheets), so submitting is online-only.
 
-const CACHE_VERSION = "btc-photo-v21";
+const CACHE_VERSION = "btc-photo-v22";
 const SHELL = [
   "./",
   "./index.html",

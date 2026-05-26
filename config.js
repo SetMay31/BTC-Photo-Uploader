@@ -105,6 +105,7 @@ const SURVEYS = [
   {
     key: "sea-turtle",
     label: "Sea Turtle Research",
+    pickerQuery: "Photo Uploader - Turtle Photos",
     driveFolderId: "1JakII_tWB7lDW5Zhu8hX-nPx14HdOroQ",
     theme: {
       accent: "#2d7a72",
@@ -140,6 +141,7 @@ const SURVEYS = [
   {
     key: "shark-research",
     label: "Shark Research",
+    pickerQuery: "Photo Uploader - Shark Photos",
     driveFolderId: "1aJzi0DkXDnz1ziQU0M2q9nHdEyv02HIy",
     theme: {
       accent: "#2d8fb0",
@@ -178,6 +180,7 @@ const SURVEYS = [
   {
     key: "shark-citizen-science",
     label: "Shark Citizen Science",
+    pickerQuery: "Photo Uploader - Citizen Science - Shark Photos",
     driveFolderId: "18iAb0lwRkmYskDRI2gREKc5_LxiwOtDR",
     // Matches Shark Research palette per spec.
     theme: {
@@ -254,6 +257,7 @@ const SURVEYS = [
   {
     key: "sea-slug",
     label: "Sea Slug Survey",
+    pickerQuery: "Sea Slug Photos",
     driveFolderId: "1r8Rg1qAuSlQ2tzTXFyUdXQ7DBHniontz",
     theme: {
       accent: "#1f5a4a",
@@ -283,6 +287,7 @@ const SURVEYS = [
   {
     key: "crown-of-thorns",
     label: "Crown of Thorns Survey",
+    pickerQuery: "Photo Uploader - COTs Photos",
     driveFolderId: "15OC7c0X0yLo75MbwKu2xokg8veGyMqjM",
     theme: {
       accent: "#6fb3a5",

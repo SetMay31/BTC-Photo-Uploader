@@ -112,19 +112,21 @@
     await loadPickerApi();
     const picker = window.google.picker;
     return new Promise((resolve) => {
-      // Pre-search by the survey label so the target folder appears immediately
+      // Pre-search by the actual Drive folder name (not the UI label, which is
+      // shorter for readability) so the target folder appears immediately
       // without the user having to navigate Drive. Google's drive.file scope
       // still requires the click — this just makes it a one-click experience.
+      const searchQuery = survey.pickerQuery || survey.label;
       const view = new picker.DocsView(picker.ViewId.FOLDERS)
         .setIncludeFolders(true)
         .setSelectFolderEnabled(true)
         .setMimeTypes("application/vnd.google-apps.folder")
-        .setQuery(survey.label);
+        .setQuery(searchQuery);
       const pickerInstance = new picker.PickerBuilder()
         .setOAuthToken(state.accessToken)
         .setDeveloperKey(PICKER_API_KEY)
         .setAppId(GCP_PROJECT_NUMBER)
-        .setTitle(`Click the "${survey.label}" folder to grant access`)
+        .setTitle(`Click the "${searchQuery}" folder to grant access`)
         .addView(view)
         .enableFeature(picker.Feature.SUPPORT_DRIVES)
         .setCallback((data) => {
