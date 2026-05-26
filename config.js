@@ -8,6 +8,14 @@
 // the GitHub Pages origin (e.g. https://setmay31.github.io). Paste below.
 const OAUTH_CLIENT_ID = "547270539651-9ockq941ks3kpd2gbiu3gj7vt8871dh5.apps.googleusercontent.com";
 
+// --- Google Picker API key ---
+// Required by the Drive Picker (which we use to let each user grant access to
+// individual survey folders rather than their whole Drive). Create at
+// https://console.cloud.google.com/apis/credentials → "Create credentials → API key"
+// in the same Cloud project as the OAuth client. Restrict it by HTTP referrer
+// to https://setmay31.github.io/* and http://localhost:8087/*. Paste below.
+const PICKER_API_KEY = "REPLACE_WITH_YOUR_PICKER_API_KEY";
+
 const TEAM_MEMBERS = [
   "Cass Chaytor",
   "Maisie Miles",
@@ -305,6 +313,7 @@ const SURVEYS = [
 // Expose to app.js
 window.BTC_CONFIG = {
   OAUTH_CLIENT_ID,
+  PICKER_API_KEY,
   TEAM_MEMBERS,
   SURVEYS,
 };

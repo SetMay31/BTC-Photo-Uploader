@@ -27,7 +27,26 @@ For Shark Citizen Science it also appends a row to a master Google Sheet summari
 3. **Enable APIs** in the same Cloud project:
    - Google Drive API
    - Google Sheets API
-4. **OAuth consent screen** — under "OAuth consent screen", set User Type to **External**, add yourself as a test user (and any other BTC team members who will use the app), then publish (or leave in testing if only a handful of users).
+   - Google Picker API (used so each user can hand-pick the survey folders they want to grant the app access to, instead of granting full Drive access)
+4. **Create a Picker API key**
+   - Same Credentials page → "Create credentials → API key"
+   - Click "Edit API key" → under **Application restrictions**, pick "HTTP referrers" and add:
+     - `https://setmay31.github.io/*`
+     - `http://localhost:8087/*`
+   - Under **API restrictions**, restrict to "Google Picker API"
+   - Copy the key and paste it into `config.js` as `PICKER_API_KEY`
+5. **OAuth consent screen** — under "OAuth consent screen", set User Type to **External**, add yourself as a test user (and any other BTC team members who will use the app), then publish (or leave in testing if only a handful of users).
+
+### How the limited-Drive flow works for users
+
+The app requests only the `drive.file` scope, which means it can see/edit **only** files and folders the user explicitly hands to it (and files the app itself creates).
+
+On a user's first time selecting any survey, a yellow banner appears:
+> First-time setup for this device. This app uses limited Drive access… Pick the [Survey] folder to grant access.
+
+Clicking the button opens the Google Drive Picker. The user navigates to the BTC survey folder and selects it. The app verifies the picked folder ID matches the one in `config.js` and caches the grant in localStorage. From then on, uploads to that survey are silent.
+
+Users grant access lazily — only for surveys they actually use, not all five up front.
 
 ## Local testing
 

@@ -5,16 +5,25 @@
 (function () {
   "use strict";
 
-  const { OAUTH_CLIENT_ID, TEAM_MEMBERS, SURVEYS } = window.BTC_CONFIG;
+  const { OAUTH_CLIENT_ID, PICKER_API_KEY, TEAM_MEMBERS, SURVEYS } = window.BTC_CONFIG;
 
-  // Scopes: drive.file restricts the app to files/folders it creates OR the user
-  // explicitly opens. Since our root folders pre-exist, we also need full drive
-  // scope to find children + upload into existing folders we don't own.
-  // spreadsheets is needed to create + append rows to the citizen science master sheet.
+  // Project number is the prefix of the OAuth client ID — required by the Picker API.
+  const GCP_PROJECT_NUMBER = OAUTH_CLIENT_ID.split("-")[0];
+
+  // Scopes: drive.file restricts the app to files/folders it creates OR files the
+  // user has explicitly opened via the Drive Picker. Each user grants access to
+  // each survey folder once via a picker dialog; the app cannot see anything else
+  // in their Drive. spreadsheets is needed for the citizen science master sheet
+  // (which the app creates itself, so drive.file covers it).
   const OAUTH_SCOPES = [
-    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/spreadsheets",
   ].join(" ");
+
+  // localStorage key for caching per-user, per-survey folder grants. The grant
+  // itself lives at Google (drive.file remembers user-picked files), but caching
+  // saves us a round-trip to confirm it's still valid.
+  const GRANT_STORAGE_PREFIX = "btc-photo-uploader:granted-folder:";
 
   const state = {
     accessToken: null,
@@ -60,6 +69,84 @@
   }
   function saveCustomSites(key, list) {
     localStorage.setItem(key, JSON.stringify(list));
+  }
+
+  // ---------- Folder grants (drive.file scope) ----------
+  function grantKey(survey) {
+    return GRANT_STORAGE_PREFIX + survey.key;
+  }
+  function isFolderGranted(survey) {
+    return localStorage.getItem(grantKey(survey)) === survey.driveFolderId;
+  }
+  function markFolderGranted(survey) {
+    localStorage.setItem(grantKey(survey), survey.driveFolderId);
+  }
+  function clearFolderGrant(survey) {
+    localStorage.removeItem(grantKey(survey));
+  }
+
+  // Lazy-load the Picker API.
+  let pickerLoadPromise = null;
+  function loadPickerApi() {
+    if (pickerLoadPromise) return pickerLoadPromise;
+    pickerLoadPromise = new Promise((resolve, reject) => {
+      function tryLoad() {
+        if (window.gapi && window.gapi.load) {
+          window.gapi.load("picker", { callback: () => resolve(window.google && window.google.picker) });
+        } else {
+          setTimeout(tryLoad, 100);
+        }
+      }
+      tryLoad();
+      setTimeout(() => reject(new Error("Picker API failed to load")), 10000);
+    });
+    return pickerLoadPromise;
+  }
+
+  // Opens the Drive Picker so the user can hand the app access to a specific
+  // survey folder. Resolves with true if the user picked the correct folder
+  // (matching the configured driveFolderId), false otherwise.
+  async function pickSurveyFolder(survey) {
+    if (PICKER_API_KEY.startsWith("REPLACE_WITH_YOUR")) {
+      alert("Configure PICKER_API_KEY in config.js first (see README).");
+      return false;
+    }
+    await loadPickerApi();
+    const picker = window.google.picker;
+    return new Promise((resolve) => {
+      const view = new picker.DocsView(picker.ViewId.FOLDERS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setMimeTypes("application/vnd.google-apps.folder");
+      const pickerInstance = new picker.PickerBuilder()
+        .setOAuthToken(state.accessToken)
+        .setDeveloperKey(PICKER_API_KEY)
+        .setAppId(GCP_PROJECT_NUMBER)
+        .setTitle(`Select the "${survey.label}" folder`)
+        .addView(view)
+        .enableFeature(picker.Feature.SUPPORT_DRIVES)
+        .setCallback((data) => {
+          if (data.action === picker.Action.PICKED) {
+            const pickedFolder = data.docs && data.docs[0];
+            if (pickedFolder && pickedFolder.id === survey.driveFolderId) {
+              markFolderGranted(survey);
+              resolve(true);
+            } else {
+              alert(
+                `That doesn't look like the right folder.\n\n` +
+                `Expected the folder with ID:\n${survey.driveFolderId}\n\n` +
+                `You picked: ${pickedFolder ? pickedFolder.name + " (" + pickedFolder.id + ")" : "nothing"}\n\n` +
+                `Please try again.`
+              );
+              resolve(false);
+            }
+          } else if (data.action === picker.Action.CANCEL) {
+            resolve(false);
+          }
+        })
+        .build();
+      pickerInstance.setVisible(true);
+    });
   }
 
   // ---------- Filename safety ----------
@@ -130,9 +217,25 @@
     renderMasterSheetForm();
     renderPhotoList();
     updateFolderPreview();
+    updateGrantBanner();
     updateUploadButton();
     $("#upload-result").className = "submit-result";
     $("#upload-result").textContent = "";
+  }
+
+  function updateGrantBanner() {
+    const banner = $("#grant-banner");
+    if (!banner) return;
+    if (state.previewMode || !state.accessToken || !state.currentSurvey) {
+      banner.classList.add("hidden");
+      return;
+    }
+    if (isFolderGranted(state.currentSurvey)) {
+      banner.classList.add("hidden");
+    } else {
+      $("#grant-banner-survey").textContent = state.currentSurvey.label;
+      banner.classList.remove("hidden");
+    }
   }
 
   // ---------- Field rendering ----------
@@ -578,6 +681,7 @@
     const survey = state.currentSurvey;
     if (!survey) return false;
     if (state.previewMode || !state.accessToken) return false;
+    if (!isFolderGranted(survey)) return false;
     if (state.photos.length === 0) return false;
     // Folder fields valid?
     for (const f of survey.folder.fields) {
@@ -1064,6 +1168,24 @@
     if (bannerSignin) bannerSignin.addEventListener("click", requestSignIn);
   }
 
+  function bindGrantButton() {
+    const btn = $("#grant-banner-btn");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      if (!state.currentSurvey) return;
+      btn.disabled = true;
+      try {
+        const ok = await pickSurveyFolder(state.currentSurvey);
+        if (ok) {
+          updateGrantBanner();
+          updateUploadButton();
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   function bindUploadButtons() {
     $("#upload-btn").addEventListener("click", startUpload);
     $("#clear-btn").addEventListener("click", () => {
@@ -1085,6 +1207,7 @@
     bindDropArea();
     bindAuthButtons();
     bindUploadButtons();
+    bindGrantButton();
     bindNetStatus();
     // Pre-tint with first survey palette so it doesn't flash teal-green default.
     if (SURVEYS.length) applyTheme(SURVEYS[0].theme);

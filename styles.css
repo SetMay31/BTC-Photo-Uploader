@@ -478,6 +478,23 @@ button.danger {
   font-size: 0.9rem;
 }
 
+.grant-banner {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+}
+.grant-banner p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.grant-banner .primary {
+  min-height: 40px;
+  padding: 0 20px;
+}
+
 .range-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
