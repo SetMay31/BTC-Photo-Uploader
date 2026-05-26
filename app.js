@@ -26,6 +26,7 @@
   const state = {
     accessToken: null,
     tokenClient: null,
+    tokenRefreshTimer: null,
     currentSurvey: null,
     folderValues: {},
     masterSheetValues: {},
@@ -731,6 +732,13 @@
       callback: (resp) => {
         if (resp && resp.access_token) {
           state.accessToken = resp.access_token;
+          // Schedule a silent refresh ~1 minute before expiry to keep the
+          // session alive across long upload sessions.
+          if (resp.expires_in) {
+            const refreshIn = Math.max((resp.expires_in - 60) * 1000, 60000);
+            clearTimeout(state.tokenRefreshTimer);
+            state.tokenRefreshTimer = setTimeout(silentSignIn, refreshIn);
+          }
           $("#auth-prompt").classList.add("hidden");
           $("#uploader").classList.remove("hidden");
           $("#auth-btn").textContent = "Signed in";
@@ -739,10 +747,25 @@
           if (!state.currentSurvey) selectSurvey(SURVEYS[0].key);
           updateUploadButton();
         } else if (resp && resp.error) {
-          $("#auth-error").textContent = `Sign-in failed: ${resp.error_description || resp.error}`;
+          // Silent failures (interaction_required, login_required) just mean
+          // the user needs to click "Sign in"; don't surface them as errors.
+          const silent = resp.error === "interaction_required" || resp.error === "login_required" || resp.error === "consent_required";
+          if (!silent) {
+            $("#auth-error").textContent = `Sign-in failed: ${resp.error_description || resp.error}`;
+          }
         }
       },
     });
+    // Attempt a silent sign-in on page load. If the user has previously granted
+    // consent and their Google session is still valid, this re-issues a token
+    // with no UI shown.
+    silentSignIn();
+  }
+
+  function silentSignIn() {
+    if (!state.tokenClient) return;
+    if (OAUTH_CLIENT_ID.startsWith("REPLACE_WITH_YOUR_CLIENT_ID")) return;
+    state.tokenClient.requestAccessToken({ prompt: "" });
   }
 
   function requestSignIn() {
