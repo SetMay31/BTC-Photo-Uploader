@@ -11,14 +11,12 @@
   const GCP_PROJECT_NUMBER = OAUTH_CLIENT_ID.split("-")[0];
 
   // Scopes: drive.file restricts the app to files/folders it creates OR files the
-  // user has explicitly opened via the Drive Picker. Each user grants access to
-  // each survey folder once via a picker dialog; the app cannot see anything else
-  // in their Drive. spreadsheets is needed for the citizen science master sheet
-  // (which the app creates itself, so drive.file covers it).
-  const OAUTH_SCOPES = [
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/spreadsheets",
-  ].join(" ");
+  // user has explicitly opened via the Drive Picker. Sheets API also accepts
+  // drive.file, so it covers the citizen science master sheet (which the app
+  // creates itself). No broader scopes needed — the consent screen now shows
+  // only "See, edit, create, and delete only the specific Drive files you use
+  // with this app".
+  const OAUTH_SCOPES = "https://www.googleapis.com/auth/drive.file";
 
   // localStorage key for caching per-user, per-survey folder grants. The grant
   // itself lives at Google (drive.file remembers user-picked files), but caching
