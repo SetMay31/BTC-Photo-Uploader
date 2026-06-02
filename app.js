@@ -1101,7 +1101,9 @@
             fv.date || "",
             fv.site || "",
             fv.uploadMethod || "",
-            // Submitted By: take from the first photo's submittedBy (per-photo field).
+            // Submitted By (User): the BTC team member processing the citizen report.
+            fv.uploadedBy || "",
+            // Submitted By: the person who reported the sighting (taken from the first photo).
             (state.photos.find((p) => p.values.submittedBy) || { values: {} }).values.submittedBy || "",
             mv.depth || "",
             mv.time || "",
