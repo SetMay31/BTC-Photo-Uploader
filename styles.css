@@ -532,6 +532,13 @@ button.danger {
   width: 100%;
   min-width: 0;
 }
+.breakdown-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--warn);
+  font-weight: 500;
+}
 
 .site-select-wrap {
   display: flex;

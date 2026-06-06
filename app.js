@@ -436,6 +436,9 @@
         row.appendChild(cell);
       });
       labelEl.appendChild(row);
+      // Inline error shown when the sum of parts exceeds the related total.
+      const errorEl = el("span", { class: "breakdown-error hidden" });
+      labelEl.appendChild(errorEl);
     } else if (field.type === "range") {
       // Two text inputs side by side (e.g. min / max size).
       const row = el("div", { class: "range-row" });
@@ -698,12 +701,38 @@
     }
   }
 
+  // Validate that the sum of count-breakdown parts doesn't exceed the related
+  // total field. Returns true if OK (or not applicable). Updates the inline
+  // error display as a side effect.
+  function validateBreakdown() {
+    const survey = state.currentSurvey;
+    if (!survey || !survey.masterSheet) return true;
+    const errorEl = document.querySelector(".breakdown-error");
+    if (!errorEl) return true;
+    // Citizen science is the only consumer, so the "total" is hard-coded here.
+    const total = parseFloat(state.masterSheetValues.sharksSeenTotal || "") ;
+    const nn = parseFloat(state.masterSheetValues.neonateCount || "0") || 0;
+    const jv = parseFloat(state.masterSheetValues.juvenileCount || "0") || 0;
+    const a  = parseFloat(state.masterSheetValues.adultCount || "0") || 0;
+    const sum = nn + jv + a;
+    // Only warn when both Total and at least one breakdown value are present.
+    if (!isNaN(total) && total >= 0 && sum > total) {
+      errorEl.textContent = `Breakdown (${sum}) exceeds Total (${total}).`;
+      errorEl.classList.remove("hidden");
+      return false;
+    }
+    errorEl.classList.add("hidden");
+    errorEl.textContent = "";
+    return true;
+  }
+
   function canUpload() {
     const survey = state.currentSurvey;
     if (!survey) return false;
     if (state.previewMode || !state.accessToken) return false;
     if (!isFolderGranted(survey)) return false;
     if (state.photos.length === 0 && !survey.allowEmptyMedia) return false;
+    if (!validateBreakdown()) return false;
     // Folder fields valid?
     for (const f of survey.folder.fields) {
       if (f.required && !state.folderValues[f.name]) return false;
