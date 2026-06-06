@@ -205,6 +205,9 @@ const SURVEYS = [
           required: true,
         },
         { name: "uploadedBy", label: "Submitted By (User)", type: "team-or-other", required: true },
+        // Folder-level Submitted By is only shown / used when no media is attached.
+        // With media, each photo carries its own Submitted By (per-photo field).
+        { name: "submittedByReporter", label: "Submitted By", type: "text", placeholder: "Name of person who reported the sighting", showWhenNoMedia: true },
       ],
       template: "{date}-{site}-{uploadMethod}",
     },

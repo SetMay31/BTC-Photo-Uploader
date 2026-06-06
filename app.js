@@ -473,7 +473,19 @@
           updateUploadButton();
         },
       });
+      if (f.showWhenNoMedia) node.dataset.showWhenNoMedia = "1";
       form.appendChild(node);
+    });
+    updateConditionalFolderFields();
+  }
+
+  // Fields marked showWhenNoMedia only appear when there are no photos queued.
+  function updateConditionalFolderFields() {
+    const form = $("#folder-form");
+    if (!form) return;
+    const hasPhotos = state.photos.length > 0;
+    form.querySelectorAll("[data-show-when-no-media]").forEach((node) => {
+      node.classList.toggle("hidden", hasPhotos);
     });
   }
 
@@ -643,6 +655,7 @@
       updatePhotoPreview(photo);
     });
     $("#photo-count").textContent = `${state.photos.length} photo${state.photos.length === 1 ? "" : "s"}`;
+    updateConditionalFolderFields();
   }
 
   function renumberSequence() {
@@ -1114,8 +1127,12 @@
             fv.uploadMethod || "",
             // Submitted By (User): the BTC team member processing the citizen report.
             fv.uploadedBy || "",
-            // Submitted By: the person who reported the sighting (taken from the first photo).
-            (state.photos.find((p) => p.values.submittedBy) || { values: {} }).values.submittedBy || "",
+            // Submitted By: the citizen who reported. With photos, taken from the
+            // first photo's per-photo field; without photos, from the folder-level
+            // field that only appears in the no-media case.
+            hasMedia
+              ? ((state.photos.find((p) => p.values.submittedBy) || { values: {} }).values.submittedBy || "")
+              : (fv.submittedByReporter || ""),
             mv.depth || "",
             mv.time || "",
             mv.sizeMin || "",
