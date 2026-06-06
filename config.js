@@ -182,6 +182,9 @@ const SURVEYS = [
     label: "Shark Citizen Science",
     pickerQuery: "Photo Uploader - Citizen Science - Shark Photos",
     driveFolderId: "18iAb0lwRkmYskDRI2gREKc5_LxiwOtDR",
+    // Citizen reports can be photoless — log the row to the master sheet
+    // without creating a Drive folder if no media is attached.
+    allowEmptyMedia: true,
     // Matches Shark Research palette per spec.
     theme: {
       accent: "#2d8fb0",

@@ -673,10 +673,13 @@
     const btn = $("#upload-btn");
     const ok = canUpload();
     btn.disabled = !ok || state.uploading;
+    const survey = state.currentSurvey;
     if (state.uploading) {
       btn.textContent = "Uploading…";
     } else if (state.previewMode) {
       btn.textContent = "Sign in to upload";
+    } else if (state.photos.length === 0 && survey && survey.allowEmptyMedia) {
+      btn.textContent = "Upload Without Media";
     } else {
       btn.textContent = `Upload ${state.photos.length} photo${state.photos.length === 1 ? "" : "s"}`;
     }
@@ -687,7 +690,7 @@
     if (!survey) return false;
     if (state.previewMode || !state.accessToken) return false;
     if (!isFolderGranted(survey)) return false;
-    if (state.photos.length === 0) return false;
+    if (state.photos.length === 0 && !survey.allowEmptyMedia) return false;
     // Folder fields valid?
     for (const f of survey.folder.fields) {
       if (f.required && !state.folderValues[f.name]) return false;
@@ -1019,82 +1022,90 @@
     resultEl.textContent = "Preparing upload…";
 
     try {
-      const folderName = getFolderName();
-      // 1. Find or create the dated subfolder.
-      let folder = await findFolderByName(survey.driveFolderId, folderName);
-      let useExisting = false;
-      let existingPhotoCount = 0;
-      if (folder) {
-        existingPhotoCount = await countPhotosInFolder(folder.id);
-        const choice = await promptDupFolder(folderName, existingPhotoCount);
-        if (choice === "cancel") {
-          state.uploading = false;
-          resultEl.className = "submit-result info";
-          resultEl.textContent = "Upload cancelled.";
-          updateUploadButton();
-          return;
-        }
-        if (choice === "add") {
-          useExisting = true;
-        } else if (choice === "suffix") {
-          // Find first free suffix.
-          let suffix = 2;
-          while (await findFolderByName(survey.driveFolderId, `${folderName}-${suffix}`)) suffix++;
-          folder = await createFolder(survey.driveFolderId, `${folderName}-${suffix}`);
-          existingPhotoCount = 0;
-        }
-      } else {
-        folder = await createFolder(survey.driveFolderId, folderName);
-      }
-
-      // 2. If sequence continues from folder, offset session indices.
-      //    Manually-overridden numbers are respected (user took explicit control).
-      const seq = survey.photo.sequence;
-      const seqOffset = (seq && seq.continueFromFolder && useExisting) ? existingPhotoCount : 0;
-      if (seq) {
-        state.photos.forEach((p, i) => {
-          if (p._seqOverridden) return;
-          p.values[seq.field] = String(i + 1 + seqOffset);
-          if (p._seqInputEl) p._seqInputEl.value = p.values[seq.field];
-          updatePhotoPreview(p);
-        });
-      }
-
-      // 3. Upload each photo sequentially (keeps order + simpler retries).
+      const hasMedia = state.photos.length > 0;
+      let folder = null;
+      let folderUrl = "";
       let successCount = 0;
-      for (const photo of state.photos) {
-        if (photo.status === "uploaded") { successCount++; continue; }
-        photo.status = "uploading";
-        photo.error = null;
-        photo._rowEl.classList.remove("failed", "uploaded");
-        photo._rowEl.classList.add("uploading");
-        ensureProgressBar(photo);
-        try {
-          const blob = await ensureJpegBlob(photo);
-          const name = getPhotoFilename(photo);
-          const result = await uploadPhoto(folder.id, name, blob, (pct) => {
-            if (photo._progressFill) photo._progressFill.style.width = `${Math.round(pct * 100)}%`;
+
+      if (hasMedia) {
+        const folderName = getFolderName();
+        // 1. Find or create the dated subfolder.
+        folder = await findFolderByName(survey.driveFolderId, folderName);
+        let useExisting = false;
+        let existingPhotoCount = 0;
+        if (folder) {
+          existingPhotoCount = await countPhotosInFolder(folder.id);
+          const choice = await promptDupFolder(folderName, existingPhotoCount);
+          if (choice === "cancel") {
+            state.uploading = false;
+            resultEl.className = "submit-result info";
+            resultEl.textContent = "Upload cancelled.";
+            updateUploadButton();
+            return;
+          }
+          if (choice === "add") {
+            useExisting = true;
+          } else if (choice === "suffix") {
+            // Find first free suffix.
+            let suffix = 2;
+            while (await findFolderByName(survey.driveFolderId, `${folderName}-${suffix}`)) suffix++;
+            folder = await createFolder(survey.driveFolderId, `${folderName}-${suffix}`);
+            existingPhotoCount = 0;
+          }
+        } else {
+          folder = await createFolder(survey.driveFolderId, folderName);
+        }
+        folderUrl = `https://drive.google.com/drive/folders/${folder.id}`;
+
+        // 2. If sequence continues from folder, offset session indices.
+        //    Manually-overridden numbers are respected (user took explicit control).
+        const seq = survey.photo.sequence;
+        const seqOffset = (seq && seq.continueFromFolder && useExisting) ? existingPhotoCount : 0;
+        if (seq) {
+          state.photos.forEach((p, i) => {
+            if (p._seqOverridden) return;
+            p.values[seq.field] = String(i + 1 + seqOffset);
+            if (p._seqInputEl) p._seqInputEl.value = p.values[seq.field];
+            updatePhotoPreview(p);
           });
-          photo.driveId = result.id;
-          photo.status = "uploaded";
-          photo._rowEl.classList.remove("uploading");
-          photo._rowEl.classList.add("uploaded");
-          if (photo._progressFill) photo._progressFill.style.width = "100%";
-          successCount++;
-        } catch (err) {
-          photo.status = "failed";
-          photo.error = err.message;
-          photo._rowEl.classList.remove("uploading");
-          photo._rowEl.classList.add("failed");
-          photo._errorEl.textContent = err.message;
+        }
+
+        // 3. Upload each photo sequentially (keeps order + simpler retries).
+        for (const photo of state.photos) {
+          if (photo.status === "uploaded") { successCount++; continue; }
+          photo.status = "uploading";
+          photo.error = null;
+          photo._rowEl.classList.remove("failed", "uploaded");
+          photo._rowEl.classList.add("uploading");
+          ensureProgressBar(photo);
+          try {
+            const blob = await ensureJpegBlob(photo);
+            const name = getPhotoFilename(photo);
+            const result = await uploadPhoto(folder.id, name, blob, (pct) => {
+              if (photo._progressFill) photo._progressFill.style.width = `${Math.round(pct * 100)}%`;
+            });
+            photo.driveId = result.id;
+            photo.status = "uploaded";
+            photo._rowEl.classList.remove("uploading");
+            photo._rowEl.classList.add("uploaded");
+            if (photo._progressFill) photo._progressFill.style.width = "100%";
+            successCount++;
+          } catch (err) {
+            photo.status = "failed";
+            photo.error = err.message;
+            photo._rowEl.classList.remove("uploading");
+            photo._rowEl.classList.add("failed");
+            photo._errorEl.textContent = err.message;
+          }
         }
       }
 
-      // 4. Citizen Science master sheet append (only if all photos uploaded).
-      if (survey.masterSheet && successCount > 0) {
+      // 4. Master sheet append: write a row whenever the survey has a master
+      //    sheet AND we either uploaded photos OR were explicitly told to log
+      //    photoless submissions (citizen science).
+      if (survey.masterSheet && (successCount > 0 || (!hasMedia && survey.allowEmptyMedia))) {
         try {
           const sheetId = await findOrCreateMasterSheet(survey);
-          const folderUrl = `https://drive.google.com/drive/folders/${folder.id}`;
           const fv = state.folderValues;
           const mv = state.masterSheetValues;
           const row = [
@@ -1121,7 +1132,11 @@
           await appendMasterSheetRow(sheetId, row);
         } catch (err) {
           resultEl.className = "submit-result error";
-          resultEl.textContent = `${successCount}/${state.photos.length} photos uploaded, but master sheet append failed: ${err.message}`;
+          if (!hasMedia) {
+            resultEl.textContent = `Master sheet append failed: ${err.message}`;
+          } else {
+            resultEl.textContent = `${successCount}/${state.photos.length} photos uploaded, but master sheet append failed: ${err.message}`;
+          }
           state.uploading = false;
           updateUploadButton();
           return;
@@ -1129,10 +1144,13 @@
       }
 
       const failed = state.photos.length - successCount;
-      if (failed === 0) {
+      if (!hasMedia) {
+        resultEl.className = "submit-result success";
+        resultEl.textContent = "✓ Submission logged to master sheet (no media uploaded).";
+      } else if (failed === 0) {
         resultEl.className = "submit-result success";
         const sheetNote = survey.masterSheet ? " Master sheet row added." : "";
-        resultEl.innerHTML = `✓ Uploaded ${successCount} photo${successCount === 1 ? "" : "s"} to <a href="https://drive.google.com/drive/folders/${folder.id}" target="_blank" rel="noopener">${folderName}</a>.${sheetNote}`;
+        resultEl.innerHTML = `✓ Uploaded ${successCount} photo${successCount === 1 ? "" : "s"} to <a href="${folderUrl}" target="_blank" rel="noopener">${getFolderName()}</a>.${sheetNote}`;
       } else {
         resultEl.className = "submit-result error";
         resultEl.textContent = `${successCount} uploaded, ${failed} failed. Press Upload again to retry failed photos.`;
