@@ -223,9 +223,27 @@
     renderPhotoList();
     updateFolderPreview();
     updateGrantBanner();
+    updateMediaAcceptance(survey);
     updateUploadButton();
     $("#upload-result").className = "submit-result";
     $("#upload-result").textContent = "";
+  }
+
+  function updateMediaAcceptance(survey) {
+    const input = $("#file-input");
+    const drop = $("#drop-area");
+    if (!input || !drop) return;
+    if (survey.acceptVideo) {
+      input.setAttribute("accept", "image/*,video/*,.heic,.HEIC");
+      drop.querySelectorAll(".muted").forEach((el) => {
+        el.textContent = "Photos (JPG, PNG, HEIC) and videos (MP4, MOV, WebM) — multiple selection supported. HEIC auto-converts to JPG.";
+      });
+    } else {
+      input.setAttribute("accept", "image/*,.heic,.HEIC");
+      drop.querySelectorAll(".muted").forEach((el) => {
+        el.textContent = "JPG, PNG, HEIC — multiple selection supported. HEIC will be auto-converted to JPG on upload.";
+      });
+    }
   }
 
   function updateGrantBanner() {
@@ -533,10 +551,18 @@
   // ---------- Photo handling ----------
   function newPhotoId() { return ++state.photoIdSeq; }
 
+  function isVideoFile(file) {
+    return file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/i.test(file.name);
+  }
+  function isImageFile(file) {
+    return file.type.startsWith("image/") || /\.heic$/i.test(file.name);
+  }
+
   async function addFiles(fileList) {
     const survey = state.currentSurvey;
     if (!survey) return;
-    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/") || /\.heic$/i.test(f.name));
+    const allowVideo = !!survey.acceptVideo;
+    const files = Array.from(fileList).filter((f) => isImageFile(f) || (allowVideo && isVideoFile(f)));
     for (const file of files) {
       const photo = {
         id: newPhotoId(),
@@ -587,7 +613,18 @@
       const row = tpl.querySelector(".photo-row");
       row.dataset.id = photo.id;
       const thumb = tpl.querySelector(".photo-thumb");
-      thumb.src = photo.thumbUrl;
+      if (isVideoFile(photo.file)) {
+        // Swap the <img> thumb for a muted <video> so we get a real preview frame.
+        const vid = document.createElement("video");
+        vid.className = thumb.className;
+        vid.src = photo.thumbUrl;
+        vid.muted = true;
+        vid.preload = "metadata";
+        vid.playsInline = true;
+        thumb.replaceWith(vid);
+      } else {
+        thumb.src = photo.thumbUrl;
+      }
       tpl.querySelector(".photo-original-name").textContent = photo.file.name;
       const previewEl = tpl.querySelector(".photo-preview-name");
       previewEl.textContent = "";

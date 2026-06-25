@@ -185,6 +185,8 @@ const SURVEYS = [
     // Citizen reports can be photoless — log the row to the master sheet
     // without creating a Drive folder if no media is attached.
     allowEmptyMedia: true,
+    // Citizen reports often include short video clips, not just photos.
+    acceptVideo: true,
     // Matches Shark Research palette per spec.
     theme: {
       accent: "#2d8fb0",
